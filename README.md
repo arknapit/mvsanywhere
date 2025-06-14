@@ -115,7 +115,6 @@ If you run out of GPU memory, you can try removing the `--fast_cost_colume` flag
 │   │-- transforms.json
 │-- recording_1/
 |   ...
-|-- scans.txt # See point 3.
 ```
 
 3. And run the model 🚀🚀🚀
@@ -140,7 +139,42 @@ python src/mvsanywhere/run_demo.py \
 
 ### 📱 Android
 <details>
-<summary>Coming Soon</summary>
+<summary>Use ARCorder to get a video in Android with camera poses</summary>
+
+1. Download the [ARCorder](https://github.com/serizba/arcorder) app from [releases](https://github.com/serizba/arcorder/releases/download/v1.0.0/arcorder_release.apk). This very simple app relies on Android AR Core system, accuracy of the computed poses might be limited. Capture a recording of your favourite environment and save it. 
+
+2. Place your recordings in a directory with the following structure:
+
+```
+/path/to/recordings/
+│-- recording_0/
+│   │-- images/
+|   |   |-- image_0.png
+|   |   |-- image_1.png
+|   |   ...
+│   │-- transforms.json
+│-- recording_1/
+|   ...
+```
+
+3. And run the model 🚀🚀🚀
+```shell
+python src/mvsanywhere/run_demo.py \
+    --name mvsanywhere \
+    --output_base_path OUTPUT_PATH \
+    --config_file configs/models/mvsanywhere_model.yaml \
+    --load_weights_from_checkpoint weights/mvsanywhere_hero.ckpt \
+    --data_config_file configs/data/nerfstudio/nerfstudio_empty.yaml \
+    --scan_parent_directory /path/to/recordings/ \
+    --scan_name recording_0 \
+    --fast_cost_volume \
+    --num_workers 8 \
+    --batch_size 2 \
+    --image_height 480 \
+    --image_width 640 \
+    --dump_depth_visualization \
+    --rotate_images # Only if you recorded in portrait
+```
 
 </details>
 
