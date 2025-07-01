@@ -123,9 +123,11 @@ class MVSA_Wrapped(nn.Module):
                 "invK_matching_b44": torch.linalg.inv(intrinsics_key).float(),
             }
 
+            estimate_depth_range = True
             if min_depth is not None and max_depth is not None:
                 cur_data["min_depth"] = min_depth
                 cur_data["max_depth"] = max_depth
+                estimate_depth_range = False
 
             src_data = {
                 "image_b3hw": torch.stack(images_source, dim=1).float(),
@@ -142,6 +144,7 @@ class MVSA_Wrapped(nn.Module):
                 unbatched_matching_encoder_forward=True,
                 return_mask=True,
                 num_refinement_steps=int(self.use_refinement),
+                estimate_depth_range=estimate_depth_range,
             )
 
             pred_depth = outputs["depth_pred_s0_b1hw"]
