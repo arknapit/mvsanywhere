@@ -75,7 +75,10 @@ def use_memeffattn_in_model(model):
             num_heads=slow_attn.num_heads,
         )
         meff_attn.qkv = slow_attn.qkv
-        meff_attn.attn_drop = slow_attn.attn_drop
+        if isinstance(slow_attn.attn_drop, nn.Dropout):
+            meff_attn.attn_drop = slow_attn.attn_drop
+        else:
+            meff_attn.attn_drop = nn.Dropout(slow_attn.attn_drop)
         meff_attn.proj = slow_attn.proj
         meff_attn.proj_drop = slow_attn.proj_drop
 
