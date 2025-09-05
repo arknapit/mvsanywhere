@@ -74,7 +74,9 @@ class Project3D(jit.ScriptModule):
         self.register_buffer("eps", torch.tensor(eps).view(1, 1, 1))
 
     @jit.script_method
-    def forward(self, points_b4N: Tensor, K_b44: Tensor, cam_T_world_b44: Tensor) -> Tensor:
+    def forward(
+        self, points_b4N: Tensor, K_b44: Tensor, cam_T_world_b44: Tensor
+    ) -> Tensor:
         """
         Projects spatial points in 3D world space to camera image space using
         the extrinsics matrix cam_T_world_b44 and intrinsics K_b44.
@@ -86,7 +88,9 @@ class Project3D(jit.ScriptModule):
         # from Kornia and OpenCV, https://kornia.readthedocs.io/en/latest/_modules/kornia/geometry/conversions.html#convert_points_from_homogeneous
         mask = torch.abs(cam_points_b3N[:, 2:]) > self.eps
         depth_b1N = cam_points_b3N[:, 2:] + self.eps
-        scale = torch.where(mask, 1.0 / depth_b1N, torch.tensor(1.0, device=depth_b1N.device))
+        scale = torch.where(
+            mask, 1.0 / depth_b1N, torch.tensor(1.0, device=depth_b1N.device)
+        )
 
         pix_coords_b2N = cam_points_b3N[:, :2] * scale
 
@@ -113,7 +117,7 @@ class NormalGenerator(jit.ScriptModule):
         self.kernel_size = smoothing_kernel_size
         self.std = smoothing_kernel_std
 
-    @jit.script_method
+    # @jit.script_method
     def forward(self, depth_b1hw: Tensor, invK_b44: Tensor) -> Tensor:
         """
         First smoothes incoming depth maps with a gaussian blur, backprojects
@@ -130,7 +134,7 @@ class NormalGenerator(jit.ScriptModule):
             )
         else:
             depth_smooth_b1hw = depth_b1hw
-        
+
         cam_points_b4N = self.backproject(depth_smooth_b1hw, invK_b44)
         cam_points_b3hw = cam_points_b4N[:, :3].view(-1, 3, self.height, self.width)
 
@@ -196,7 +200,9 @@ def pose_distance(pose_b44):
     R = pose_b44[:, :3, :3]
     t = pose_b44[:, :3, 3]
     R_trace = R.diagonal(offset=0, dim1=-1, dim2=-2).sum(-1)
-    R_measure = torch.sqrt(2 * (1 - torch.minimum(torch.ones_like(R_trace) * 3.0, R_trace) / 3))
+    R_measure = torch.sqrt(
+        2 * (1 - torch.minimum(torch.ones_like(R_trace) * 3.0, R_trace) / 3)
+    )
     t_measure = torch.norm(t, dim=1)
     combined_measure = torch.sqrt(t_measure**2 + R_measure**2)
 

@@ -1,7 +1,7 @@
 import logging
-import re
 import os
 import pickle
+import re
 from pathlib import Path
 from typing import Any, Optional
 
@@ -74,9 +74,13 @@ def normalize_depth_single(depth_11hw, mask_11hw, robust=False):
     return depth_norm
 
 
-def normalize_depth(depth_b1hw: torch.Tensor, mask_b1hw: torch.Tensor = None, robust: bool = False):
+def normalize_depth(
+    depth_b1hw: torch.Tensor, mask_b1hw: torch.Tensor = None, robust: bool = False
+):
     depths_11hw = torch.split(depth_b1hw, 1, 0)
-    masks_11hw = [None] * len(depths_11hw) if mask_b1hw is None else torch.split(mask_b1hw, 1, 0)
+    masks_11hw = (
+        [None] * len(depths_11hw) if mask_b1hw is None else torch.split(mask_b1hw, 1, 0)
+    )
 
     depths_norm_11hw = [
         normalize_depth_single(d, m, robust) for d, m in zip(depths_11hw, masks_11hw)
@@ -85,7 +89,7 @@ def normalize_depth(depth_b1hw: torch.Tensor, mask_b1hw: torch.Tensor = None, ro
     return torch.cat(depths_norm_11hw, dim=0)
 
 
-@torch.jit.script
+# @torch.jit.script
 def pyrdown(input_tensor: torch.Tensor, num_scales: int = 4):
     """Creates a downscale pyramid for the input tensor."""
     output = [input_tensor]
@@ -152,7 +156,9 @@ def to_gpu(input_dict, key_ignores=[]):
 
 def imagenet_normalize(image):
     """Normalizes an image with ImageNet statistics."""
-    image = TF.normalize(tensor=image, mean=(0.485, 0.456, 0.406), std=(0.229, 0.224, 0.225))
+    image = TF.normalize(
+        tensor=image, mean=(0.485, 0.456, 0.406), std=(0.229, 0.224, 0.225)
+    )
     return image
 
 
@@ -186,7 +192,9 @@ def crop_or_pad(image_bchw, new_height, new_width, pad_mode="constant"):
         the cropped and/or padded image
     """
 
-    assert image_bchw.ndim == 4, f"expected image_bchw.ndim == 4, got {image_bchw.ndim} instead."
+    assert image_bchw.ndim == 4, (
+        f"expected image_bchw.ndim == 4, got {image_bchw.ndim} instead."
+    )
 
     old_height, old_width = image_bchw.shape[2:]
 
@@ -216,7 +224,9 @@ def crop_or_pad(image_bchw, new_height, new_width, pad_mode="constant"):
     else:
         # Pad the height
         pad_top = abs((new_height - old_height) // 2)
-        image_bchw = np.pad(image_bchw, ((0, 0), (0, 0), (pad_top, pad_top), (0, 0)), mode=pad_mode)
+        image_bchw = np.pad(
+            image_bchw, ((0, 0), (0, 0), (pad_top, pad_top), (0, 0)), mode=pad_mode
+        )
 
     return image_bchw
 
@@ -285,33 +295,32 @@ def read_pfm_file(
     resampling_mode=Image.BILINEAR,
     crop=None,
     disable_warning=False,
-    target_aspect_ratio=None
+    target_aspect_ratio=None,
 ):
+    file = open(filename, "rb")
 
-    file = open(filename, 'rb')
-
-    header = file.readline().decode('utf-8').rstrip()
-    if header == 'PF':
+    header = file.readline().decode("utf-8").rstrip()
+    if header == "PF":
         color = True
-    elif header == 'Pf':
+    elif header == "Pf":
         color = False
     else:
-        raise Exception('Not a PFM file.')
+        raise Exception("Not a PFM file.")
 
-    dim_match = re.match(r'^(\d+)\s(\d+)\s$', file.readline().decode('utf-8'))
+    dim_match = re.match(r"^(\d+)\s(\d+)\s$", file.readline().decode("utf-8"))
     if dim_match:
         w, h = map(int, dim_match.groups())
     else:
-        raise Exception('Malformed PFM header.')
+        raise Exception("Malformed PFM header.")
 
     scale = float(file.readline().rstrip())
     if scale < 0:  # little-endian
-        endian = '<'
+        endian = "<"
         scale = -scale
     else:
-        endian = '>'  # big-endian
+        endian = ">"  # big-endian
 
-    data = np.fromfile(file, endian + 'f')
+    data = np.fromfile(file, endian + "f")
     shape = (h, w, 3) if color else (h, w)
 
     data = np.reshape(data, shape)
@@ -332,12 +341,12 @@ def read_pfm_file(
         # do we really need to resize? If not, skip.
         if (img_width, img_height) != (width, height):
             # warn if it doesn't make sense.
-            if ((width > img_width or height > img_height) and
-                    not disable_warning):
+            if (width > img_width or height > img_height) and not disable_warning:
                 logger.warning(
                     f"WARNING: target size ({width}, {height}) has a "
                     f"dimension larger than input size ({img_width}, "
-                    f"{img_height}).")
+                    f"{img_height})."
+                )
             img = img.resize((width, height), resample=resampling_mode)
 
     img = TF.to_tensor(img).float() * value_scale_factor
@@ -404,10 +413,12 @@ def cache_model_outputs(
         #     else:
         #         elem_output_dict[key] = None
 
-        elem_output_dict["depth_pred_s0_b1hw"] = outputs["depth_pred_s0_b1hw"][elem_ind].unsqueeze(
-            0
-        )
-        elem_output_dict["overall_mask_bhw"] = outputs["overall_mask_bhw"][elem_ind].unsqueeze(0)
+        elem_output_dict["depth_pred_s0_b1hw"] = outputs["depth_pred_s0_b1hw"][
+            elem_ind
+        ].unsqueeze(0)
+        elem_output_dict["overall_mask_bhw"] = outputs["overall_mask_bhw"][
+            elem_ind
+        ].unsqueeze(0)
 
         if "cv_confidence_b1hw" in outputs:
             elem_output_dict["cv_confidence_b1hw"] = outputs["cv_confidence_b1hw"][
@@ -415,9 +426,13 @@ def cache_model_outputs(
             ].unsqueeze(0)
 
         # include some auxiliary information
-        elem_output_dict["K_full_depth_b44"] = cur_data["K_full_depth_b44"][elem_ind].unsqueeze(0)
+        elem_output_dict["K_full_depth_b44"] = cur_data["K_full_depth_b44"][
+            elem_ind
+        ].unsqueeze(0)
         elem_output_dict["K_s0_b44"] = cur_data["K_s0_b44"][elem_ind].unsqueeze(0)
-        elem_output_dict["cam_T_world_b44"] = cur_data["cam_T_world_b44"][elem_ind].unsqueeze(0)
+        elem_output_dict["cam_T_world_b44"] = cur_data["cam_T_world_b44"][
+            elem_ind
+        ].unsqueeze(0)
 
         elem_output_dict["frame_id"] = cur_data["frame_id_string"][elem_ind]
         elem_output_dict["src_ids"] = []
