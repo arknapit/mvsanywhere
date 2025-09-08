@@ -1,6 +1,7 @@
 *.pyc
 .vscode/
 debug_scripts/
+checkpoints/
 debug_dump
 logs/
 logs

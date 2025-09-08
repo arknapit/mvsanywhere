@@ -5,15 +5,14 @@ import random
 import numpy as np
 import PIL.Image as pil
 import torch
-from torch.utils.data import Dataset
-from torchvision import transforms
-
 from mvsanywhere.utils.generic_utils import (
     imagenet_normalize,
     read_image_file,
     readlines,
 )
 from mvsanywhere.utils.geometry_utils import pose_distance, rotz
+from torch.utils.data import Dataset
+from torchvision import transforms
 
 logger = logging.getLogger(__name__)
 
@@ -132,7 +131,9 @@ class GenericMVSDataset(Dataset):
         if mv_tuple_file_suffix is not None:
             # tuple info should be available
             tuple_information_filepath = os.path.join(
-                os.environ["PWD"], tuple_info_file_location, f"{split}{mv_tuple_file_suffix}"
+                os.environ["PWD"],
+                tuple_info_file_location,
+                f"{split}{mv_tuple_file_suffix}",
             )
 
             # check if this file exists
@@ -155,34 +156,34 @@ class GenericMVSDataset(Dataset):
 
             if skip_to_frame is not None:
                 if verbose_init:
-                    print(f"".center(80, "#"))
-                    print(f"".center(80, "#"))
-                    print(f"".center(80, "#"))
+                    print("".center(80, "#"))
+                    print("".center(80, "#"))
+                    print("".center(80, "#"))
                     print(f" Skipping to frame {skip_to_frame} ".center(80, "#"))
-                    print(f"".center(80, "#"))
-                    print(f"".center(80, "#"))
-                    print(f"".center(80, "#"), "\n")
+                    print("".center(80, "#"))
+                    print("".center(80, "#"))
+                    print("".center(80, "#"), "\n")
                 self.frame_tuples = self.frame_tuples[skip_to_frame:]
 
             # optionally skip every frame with interval skip_frame
             if skip_frames is not None:
                 if verbose_init:
-                    print(f"".center(80, "#"))
-                    print(f"".center(80, "#"))
-                    print(f"".center(80, "#"))
+                    print("".center(80, "#"))
+                    print("".center(80, "#"))
+                    print("".center(80, "#"))
                     print(f" Skipping every {skip_frames} ".center(80, "#"))
-                    print(f"".center(80, "#"))
-                    print(f"".center(80, "#"))
-                    print(f"".center(80, "#"), "\n")
+                    print("".center(80, "#"))
+                    print("".center(80, "#"))
+                    print("".center(80, "#"), "\n")
                 self.frame_tuples = self.frame_tuples[::skip_frames]
         else:
             if verbose_init:
-                print(f"".center(80, "#"))
+                print("".center(80, "#"))
                 print(
-                    f" tuple_information_filepath isn't provided."
+                    " tuple_information_filepath isn't provided."
                     "Only basic dataloader functions are available. ".center(80, "#")
                 )
-                print(f"".center(80, "#"), "\n")
+                print("".center(80, "#"), "\n")
 
         self.image_width = image_width
         self.image_height = image_height
@@ -190,7 +191,11 @@ class GenericMVSDataset(Dataset):
         self.high_res_image_height = high_res_image_height
 
         # Random resize crop
-        self.random_resize_crop = transforms.RandomResizedCrop((self.image_height, self.image_width), scale=(0.75, 1.0), ratio=(4/3, 4/3))
+        self.random_resize_crop = transforms.RandomResizedCrop(
+            (self.image_height, self.image_width),
+            scale=(0.75, 1.0),
+            ratio=(4 / 3, 4 / 3),
+        )
 
         # size up depth using ratio of RGB to depth
         self.depth_height = int(self.image_height * prediction_scale)
@@ -216,7 +221,7 @@ class GenericMVSDataset(Dataset):
         self.prediction_scale = prediction_scale
         self.prediction_num_scales = prediction_num_scales
 
-        # If high resolution image size is not provided, 
+        # If high resolution image size is not provided,
         # we use the one from the first frame
         if self.include_high_res_color and (
             self.high_res_image_height is None or self.high_res_image_width is None
@@ -224,9 +229,7 @@ class GenericMVSDataset(Dataset):
             self.high_res_image_height = None
             self.high_res_image_width = None
             first_frame = self.frame_tuples[0].split(" ")
-            first_image = self.load_high_res_color(
-                first_frame[0], first_frame[1]
-            )
+            first_image = self.load_high_res_color(first_frame[0], first_frame[1])
             self.high_res_image_height = first_image.shape[1]
             self.high_res_image_width = first_image.shape[2]
 
@@ -244,7 +247,7 @@ class GenericMVSDataset(Dataset):
 
         raise NotImplementedError()
 
-    def get_valid_frame_ids(self, split, scan, store_computed=True):
+    def get_valid_frame_ids(self, split, scan, store_computed=False):
         """Either loads or computes the ids of valid frames in the dataset for
         a scan.
 
@@ -590,7 +593,9 @@ class GenericMVSDataset(Dataset):
 
         if load_depth:
             # get depth
-            depth_outputs = self.load_target_size_depth_and_mask(scan_id, frame_id, crop)
+            depth_outputs = self.load_target_size_depth_and_mask(
+                scan_id, frame_id, crop
+            )
             if len(depth_outputs) == 3:
                 depth, mask, mask_b = depth_outputs
                 skymask = torch.full_like(mask, torch.nan)
@@ -610,8 +615,16 @@ class GenericMVSDataset(Dataset):
                 mask_b = torch.flip(mask_b, (-1,))
                 skymask = torch.flip(skymask, (-1,))
 
-            max_depth = depth[torch.isfinite(depth)].max() if torch.isfinite(depth).any().item() else torch.tensor(10.0)
-            min_depth = depth[torch.isfinite(depth)].min() if torch.isfinite(depth).any().item() else torch.tensor(10.0)
+            max_depth = (
+                depth[torch.isfinite(depth)].max()
+                if torch.isfinite(depth).any().item()
+                else torch.tensor(10.0)
+            )
+            min_depth = (
+                depth[torch.isfinite(depth)].min()
+                if torch.isfinite(depth).any().item()
+                else torch.tensor(10.0)
+            )
 
             max_depth = max_depth * (torch.rand(1)[0] + 1.0)
             min_depth = min_depth * (torch.rand(1)[0] * 0.5 + 0.5)
@@ -621,8 +634,8 @@ class GenericMVSDataset(Dataset):
                     "depth_b1hw": depth,
                     "mask_b1hw": mask,
                     "mask_b_b1hw": mask_b,
-                    "max_depth": max_depth, #depth[torch.isfinite(depth)].max() if torch.isfinite(depth).any().item() else torch.tensor(10.0),
-                    "min_depth": min_depth, #depth[torch.isfinite(depth)].min() if torch.isfinite(depth).any().item() else torch.tensor(1.0),
+                    "max_depth": max_depth,  # depth[torch.isfinite(depth)].max() if torch.isfinite(depth).any().item() else torch.tensor(10.0),
+                    "min_depth": min_depth,  # depth[torch.isfinite(depth)].min() if torch.isfinite(depth).any().item() else torch.tensor(1.0),
                     "skymask_b1hw": skymask,
                 }
             )
@@ -646,8 +659,8 @@ class GenericMVSDataset(Dataset):
 
         if self.include_full_res_depth:
             # get high res depth
-            full_res_depth, full_res_mask, full_res_mask_b = self.load_full_res_depth_and_mask(
-                scan_id, frame_id, crop
+            full_res_depth, full_res_mask, full_res_mask_b = (
+                self.load_full_res_depth_and_mask(scan_id, frame_id, crop)
             )
 
             if self.rotate_images:
@@ -671,6 +684,13 @@ class GenericMVSDataset(Dataset):
         if self.pass_frame_id:
             output_dict["frame_id_string"] = self.get_frame_id_string(frame_id)
 
+            frame_id_string = self.get_frame_id_string(frame_id)
+
+            # the MVSA dataloader usually has the frame_id_string with file ending, so we need to remove it.
+            if "." == frame_id_string[-4]:
+                frame_id_string = frame_id_string[:-4]
+            output_dict["frame_name"] = frame_id_string
+
         return output_dict
 
     def stack_src_data(self, src_data):
@@ -679,10 +699,12 @@ class GenericMVSDataset(Dataset):
         tensor_names = src_data[0].keys()
         stacked_src_data = {}
         for tensor_name in tensor_names:
-            if "frame_id_string" in tensor_name:
+            if "frame_id_string" in tensor_name or "frame_name" in tensor_name:
                 stacked_src_data[tensor_name] = [t[tensor_name] for t in src_data]
             else:
-                stacked_src_data[tensor_name] = np.stack([t[tensor_name] for t in src_data], axis=0)
+                stacked_src_data[tensor_name] = np.stack(
+                    [t[tensor_name] for t in src_data], axis=0
+                )
 
         return stacked_src_data
 
@@ -720,10 +742,7 @@ class GenericMVSDataset(Dataset):
         for frame_ind, frame_id in enumerate(frame_ids):
             inputs += [
                 self.get_frame(
-                    scan_id,
-                    frame_id,
-                    load_depth=(frame_ind == 0),
-                    flip=flip
+                    scan_id, frame_id, load_depth=(frame_ind == 0), flip=flip
                 )
             ]
 
